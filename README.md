@@ -11,4 +11,8 @@ Objects worked
 5. Delivery Address ( aka Plant)
 6. Supplier
 7. Purchase Groups
-Transactions
+Transactions used
+Customization
+Code Customization
+![image](https://user-images.githubusercontent.com/12990241/172753900-599e5772-d8f3-4c41-9f62-5e84fc42ded8.png)
+

@@ -1,0 +1,11 @@
+  METHOD if_ex_arbcig_masterdata~publish_plant_purchage_org.
+
+    CLEAR : plant_porg_info.
+
+    DATA: wa_plant_prog_info   TYPE arbcig_plant_purchase.
+
+    MOVE-CORRESPONDING gt_delivry_address TO plant_porg_info.
+    wa_plant_prog_info-ekorg = '1001'.
+    MODIFY plant_porg_info FROM wa_plant_prog_info TRANSPORTING ekorg WHERE ZZWERKS_40 IS NOT INITIAL.
+
+  ENDMETHOD.

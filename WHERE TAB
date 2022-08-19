@@ -1,0 +1,21 @@
+  METHOD if_ex_arbcig_masterdata~update_wheretab.
+
+* This WHERE clause exclusion is applicable only to AR 'Ariba Procurement'
+    DATA: lwa_arbcig_tvarv   TYPE arbcig_tvarv.
+
+    SELECT SINGLE * FROM arbcig_tvarv
+      INTO lwa_arbcig_tvarv
+      WHERE name = 'COST_CTR_EXP_WHERE_CLAUSE_EXCL'.
+
+    IF variant  = lwa_arbcig_tvarv-variant1 AND
+       partition = lwa_arbcig_tvarv-partit AND
+       solution = lwa_arbcig_tvarv-low.
+* If "Actual Primary Costs" flag is true on Cost Center then SWA considers those cost centers as deleted or blocked,
+* rest other flags are ignored, so delete it from where clause in Ariba CIG integration
+      DELETE wheretab WHERE ( text = 'and pkzkp <> abap_true' OR   "Plan primary cost
+                              text = 'and bkzks <> abap_true' OR   "Act. Secondry cost
+                              text = 'and pkzks <> abap_true' ).   "Plan Secondry cost
+    ENDIF.
+
+
+  ENDMETHOD.

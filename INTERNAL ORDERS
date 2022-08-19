@@ -1,0 +1,11 @@
+  METHOD if_ex_arbcig_masterdata~publish_internal_order.
+
+    LOOP AT ord_info ASSIGNING FIELD-SYMBOL(<fs_inord_info>).
+      SHIFT <fs_inord_info>-aufnr LEFT DELETING LEADING '0'.
+    ENDLOOP.
+
+    LOOP AT ord_info_del ASSIGNING FIELD-SYMBOL(<fs_inord_del>).
+      SHIFT <fs_inord_del>-aufnr LEFT DELETING LEADING '0'.
+    ENDLOOP.
+
+  ENDMETHOD.

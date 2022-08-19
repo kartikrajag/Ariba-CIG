@@ -1,0 +1,35 @@
+  METHOD if_ex_arbcig_masterdata~publish_plant.
+
+*  Get the delivery address from ADRC use ME01 & CONSIGNEE
+    SELECT sort2 ,          "Plant
+           name1 ,          "Name1
+           street ,         "Street
+           po_box ,         "PO Box
+           city1 ,          "City
+           post_code1 ,     "Poatal Code
+           region ,         "Region
+           country ,        "Country
+           tel_number ,     "Telephone Number
+           fax_number ,     "Fax
+           '9001',          "Company Code
+           'USD',           "Currency
+           '  ',            "Tax Jurisdiction
+           '  ',            "Plant category
+           sort2            "Plant in 40 charcter length
+     INTO TABLE @gt_delivry_address
+     FROM adrc WHERE addr_group = 'ME01'
+     AND sort1 = 'CONSIGNEE'.
+
+
+    LOOP AT gt_delivry_address ASSIGNING FIELD-SYMBOL(<fs_delivry_address>).
+* Translate Phone number to xxx-xxx-xxxx
+      CONCATENATE <fs_delivry_address>-tel_number+0(3) <fs_delivry_address>-tel_number+3(3)
+      <fs_delivry_address>-tel_number+6(4)
+      INTO  <fs_delivry_address>-tel_number SEPARATED BY '-'.
+      REPLACE ALL OCCURRENCES OF '-' IN <fs_delivry_address>-pstlz WITH ''.
+    ENDLOOP.
+
+    CLEAR: ship_to_info.
+    ship_to_info = gt_delivry_address.
+
+  ENDMETHOD.

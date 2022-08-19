@@ -1,0 +1,17 @@
+  METHOD if_ex_arbcig_masterdata~publish_cost_center.
+*
+* Remove leading zeros from cost center and since Ariba CIG can not
+* default Purchasing Unit to '1001 so add a new field Purchasing Unit
+* and default its value to  '1001'
+
+    LOOP AT cost_center_info ASSIGNING FIELD-SYMBOL(<fs_costctr_info>).
+      SHIFT <fs_costctr_info>-kostl LEFT DELETING LEADING '0'.
+       <fs_costctr_info>-ZZPUR_UNIT = '1001'. "Default Purchasing Unit to 1001
+    ENDLOOP.
+
+    LOOP AT cost_center_del ASSIGNING FIELD-SYMBOL(<fs_costctr_del>).
+      SHIFT <fs_costctr_del>-kostl LEFT DELETING LEADING '0'.
+       <fs_costctr_del>-ZZPUR_UNIT = '1001'. "Default Purchasing Unit to 1001
+    ENDLOOP.
+
+  ENDMETHOD.

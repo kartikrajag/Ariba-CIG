@@ -1,0 +1,107 @@
+  METHOD if_ex_arbcig_masterdata~publish_vendor_only.
+
+    CONSTANTS: lc_uri   TYPE ad_comm VALUE 'URI',
+               lc_email TYPE ad_comm VALUE 'INT'.
+
+
+    TYPES: BEGIN OF ty_lfa1,
+             lifnr      TYPE   lifnr,
+             profs      TYPE   profs,
+             bahns      TYPE   bahns,
+             kraus      TYPE   kraus_cm,
+             waers      TYPE   bstwa,
+             deflt_comm TYPE ad_comm,
+             tel_number TYPE ad_tlnmbr1,
+             fax_number TYPE ad_fxnmbr1,
+             smtp_addr  TYPE ad_smtpadr,
+           END OF ty_lfa1.
+    DATA: lt_lfa1  TYPE STANDARD TABLE OF ty_lfa1,
+          lwa_lfa1 TYPE ty_lfa1.
+    DATA: lv_profs_len       TYPE  i.
+
+* Fetch data for custom fields from LFA1.
+    IF vendor_info[] IS NOT INITIAL.
+      SELECT lfa1~lifnr,
+             lfa1~profs,
+             lfa1~bahns,
+             lfa1~kraus,
+             lfm1~waers,
+             adrc_hdr~deflt_comm,   "default communication from Address view
+             adrc_cont~tel_number,  "From Contact Person view
+             adrc_cont~fax_number, "From Contact Person view
+             adr6~smtp_addr  "From Contact Person view
+        FROM lfa1 LEFT OUTER JOIN lfm1 ON lfa1~lifnr = lfm1~lifnr
+
+                  LEFT OUTER JOIN knvk ON lfa1~lifnr =   knvk~lifnr AND
+                                          knvk~abtnr = '0002'   "Department = Purchasing
+                  LEFT OUTER JOIN adrc as adrc_cont ON knvk~adrnd = adrc_cont~addrnumber  "Get tel,Fax for Dept 002
+                  LEFT OUTER JOIN adr6 ON knvk~adrnd =   adr6~addrnumber
+                  LEFT OUTER JOIN ADRC as adrc_hdr ON LFA1~ADRNR = adrc_hdr~addrnumber    "Header level ADRC-DEFLT_COMM
+         INTO TABLE @lt_lfa1
+        FOR ALL ENTRIES IN @vendor_info
+        WHERE lfa1~lifnr = @vendor_info-lifnr.
+
+    ENDIF.
+    LOOP AT vendor_info ASSIGNING FIELD-SYMBOL(<fs_vendinfo>).
+      CLEAR: lwa_lfa1.
+      TRY.
+          lwa_lfa1 = lt_lfa1[ lifnr =  <fs_vendinfo> ].
+        CATCH cx_sy_itab_line_not_found.
+      ENDTRY.
+
+* Do NOT send vendor to Ariba if  Vendor's Default Communiction
+* (ADRC-DEFLT_COMM) is NOT one of these ( URI, email)
+      IF lwa_lfa1-deflt_comm NE lc_uri AND lwa_lfa1-deflt_comm NE lc_email.
+        DELETE TABLE vendor_info FROM <fs_vendinfo>.
+        DELETE vendor_porg_info WHERE lifnr = lwa_lfa1-lifnr.
+        CONTINUE.
+      ENDIF.
+
+
+      <fs_vendinfo>-j_sc_currency   = lwa_lfa1-waers.
+      <fs_vendinfo>-telf1           = lwa_lfa1-tel_number.
+      <fs_vendinfo>-telfx           = lwa_lfa1-fax_number.
+      <fs_vendinfo>-smtp_addr       = lwa_lfa1-smtp_addr.
+* Default "English" to PreferredLanguage
+      <fs_vendinfo>-spras = sy-langu.
+* Concatenate name & vendor # into name
+      CONCATENATE <fs_vendinfo>-name1 '-' <fs_vendinfo>-lifnr INTO <fs_vendinfo>-name1
+      SEPARATED BY space.
+
+      IF lwa_lfa1-bahns IS NOT INITIAL.
+        <fs_vendinfo>-zznetworkid = lwa_lfa1-bahns.
+      ELSE.
+        <fs_vendinfo>-zznetworkid = lwa_lfa1-profs.
+      ENDIF.
+
+      IF lwa_lfa1-kraus IS NOT INITIAL.
+        <fs_vendinfo>-zzduns = lwa_lfa1-kraus .
+      ELSE.
+        <fs_vendinfo>-zzduns = lwa_lfa1-profs.
+      ENDIF.
+      <fs_vendinfo>-zzpurchasingunits = '1001'. "Purchasing Units
+
+* Update AddressID
+      lv_profs_len  = strlen( lwa_lfa1-profs ).
+      IF lv_profs_len GT 0.
+        <fs_vendinfo>-adrnr = lwa_lfa1-profs.
+      ELSE.
+        <fs_vendinfo>-adrnr = lwa_lfa1-lifnr.
+      ENDIF.
+      TRANSLATE lwa_lfa1-profs TO UPPER CASE.
+
+      IF lwa_lfa1-profs+0(1) EQ 'A' .
+        <fs_vendinfo>-systemid = lwa_lfa1-profs.
+      ELSE.
+        <fs_vendinfo>-systemid = lwa_lfa1-lifnr.
+      ENDIF.
+
+      LOOP AT vendor_porg_info ASSIGNING FIELD-SYMBOL(<fs_vendor_porg>).
+        CLEAR: <fs_vendor_porg>-xersy .
+      ENDLOOP.
+
+    ENDLOOP.
+
+
+
+  ENDMETHOD.

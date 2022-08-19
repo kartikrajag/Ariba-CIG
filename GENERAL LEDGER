@@ -1,0 +1,17 @@
+  METHOD if_ex_arbcig_masterdata~publish_general_ledger.
+
+* 06/08/2022: Remove leading zero's from G/L and in current interface from TIBCO
+* Field status group ( FSTAG) is defaulted to G001, Ariba is expecting the same value
+* in CIG
+
+    LOOP AT general_ledger_info ASSIGNING FIELD-SYMBOL(<fs_gl_info>).
+      SHIFT <fs_gl_info>-saknr LEFT DELETING LEADING '0'.
+      <fs_gl_info>-fstag = 'G001'.
+    ENDLOOP.
+
+    LOOP AT general_ledger_info_del ASSIGNING FIELD-SYMBOL(<fs_gl_del>).
+      SHIFT <fs_gl_del>-saknr LEFT DELETING LEADING '0'.
+      <fs_gl_del>-fstag = 'G001'.
+    ENDLOOP.
+
+  ENDMETHOD.

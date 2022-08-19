@@ -1,0 +1,42 @@
+  METHOD if_ex_arbcig_masterdata~publish_wbs.
+
+    DATA: lv_posnr   TYPE ps_posnr.
+* Write WBS Elements Converted format with '-' in between
+    LOOP AT wbs_info ASSIGNING FIELD-SYMBOL(<fs_wbs_info>).
+
+      CLEAR: lv_posnr.
+      CALL FUNCTION 'CONVERSION_EXIT_ABPSP_INPUT'
+        EXPORTING
+          input  = <fs_wbs_info>-posid
+        IMPORTING
+          output = lv_posnr.
+
+      CLEAR: <fs_wbs_info>-posid.
+      CALL FUNCTION 'CONVERSION_EXIT_ABPSP_OUTPUT'
+        EXPORTING
+          input  = lv_posnr
+        IMPORTING
+          output = <fs_wbs_info>-posid.
+
+    ENDLOOP.
+
+    LOOP AT wbs_info_del ASSIGNING FIELD-SYMBOL(<fs_wbs_info_del>).
+
+      CLEAR: lv_posnr.
+      CALL FUNCTION 'CONVERSION_EXIT_ABPSP_INPUT'
+        EXPORTING
+          input  = <fs_wbs_info_del>-posid
+        IMPORTING
+          output = lv_posnr.
+
+      CLEAR:<fs_wbs_info_del>-posid.
+      CALL FUNCTION 'CONVERSION_EXIT_ABPSP_OUTPUT'
+        EXPORTING
+          input  = lv_posnr
+        IMPORTING
+          output = <fs_wbs_info_del>-posid.
+
+    ENDLOOP.
+
+
+  ENDMETHOD.

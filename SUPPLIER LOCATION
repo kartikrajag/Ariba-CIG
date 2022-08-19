@@ -1,0 +1,79 @@
+  METHOD if_ex_arbcig_masterdata~publish_supplier_loc.
+
+    CONSTANTS: lc_uri    TYPE ad_comm VALUE 'URI'.
+
+    TYPES: BEGIN OF ty_lfa1,
+             lifnr      TYPE   lifnr,
+             bahns      TYPE   bahns,
+             zwels      TYPE   dzwels,
+             lfabc      TYPE   lfabc,
+             deflt_comm TYPE   ad_comm,
+             tel_number TYPE   ad_tlnmbr1,
+             fax_number TYPE   ad_fxnmbr1,
+             smtp_addr  TYPE   ad_smtpadr,
+           END OF ty_lfa1.
+    DATA: lt_lfa1  TYPE STANDARD TABLE OF ty_lfa1,
+          lwa_lfa1 TYPE ty_lfa1.
+
+* Fetch data for custom fields from LFA1.
+    IF supplier_loc_info[] IS NOT INITIAL.
+      SELECT lfa1~lifnr, lfa1~bahns, lfb1~zwels, lfm1~lfabc,
+        adrc~deflt_comm, adrc~tel_number,adrc~fax_number, adr6~smtp_addr
+        FROM ( lfa1 LEFT OUTER JOIN lfb1 ON lfa1~lifnr = lfb1~lifnr AND
+                                            lfb1~bukrs = '9001'
+                    LEFT OUTER JOIN lfm1 ON lfa1~lifnr = lfm1~lifnr AND
+                                             lfm1~ekorg = '1001'
+                    LEFT OUTER JOIN knvk ON lfa1~lifnr =   knvk~lifnr AND
+                                            knvk~abtnr = '0002'   "Department = Purchasing
+                    LEFT OUTER JOIN adrc ON knvk~adrnd = adrc~addrnumber
+                    LEFT OUTER JOIN adr6 ON knvk~adrnd = adr6~addrnumber )
+        INTO TABLE @lt_lfa1
+        FOR ALL ENTRIES IN @supplier_loc_info
+        WHERE lfa1~lifnr = @supplier_loc_info-lifnr.
+
+    ENDIF.
+    LOOP AT supplier_loc_info ASSIGNING FIELD-SYMBOL(<fs_supploc>).
+
+      CLEAR: lwa_lfa1.
+      TRY.
+          lwa_lfa1 = lt_lfa1[ lifnr =  <fs_supploc>-lifnr ].
+        CATCH cx_sy_itab_line_not_found.
+      ENDTRY.
+* Do NOT send vendor to Ariba if  Vendor's Default Communiction
+* (ADRC-DEFLT_COMM) is NOT one of these ( URI, email)
+      IF lwa_lfa1-deflt_comm NE lc_uri AND lwa_lfa1-deflt_comm NE 'INT'.
+        DELETE TABLE supplier_loc_info FROM <fs_supploc>.
+        CONTINUE.
+      ENDIF.
+
+      <fs_supploc>-name1 = <fs_supploc>-lifnr. "assign Vendor # to name
+      <fs_supploc>-zzcontactid = lwa_lfa1-lifnr.  "Contact ID
+      <fs_supploc>-zzprefordermthod = 'Print'.  "Prefered Ordering Method
+      <fs_supploc>-tel_number       = lwa_lfa1-tel_number.
+      <fs_supploc>-fax_number       = lwa_lfa1-fax_number.
+      <fs_supploc>-smtp_addr        = lwa_lfa1-smtp_addr.
+
+      IF lwa_lfa1-deflt_comm = lc_uri.
+        <fs_supploc>-zzprefordermthod = 'URL'.
+        <fs_supploc>-zzaribanetworkid = lwa_lfa1-bahns.
+      ENDIF.
+      <fs_supploc>-zzcus_swaorderingmethod = lwa_lfa1-deflt_comm.  "SWA Order
+      <fs_supploc>-zzsplitorderonshipto = 'false'.  "Split Order
+      IF lwa_lfa1-lfabc = 'T'.
+        <fs_supploc>-zzsplitorderonshipto = 'true'.  "Split Order
+      ENDIF.
+      <fs_supploc>-zzcus_paymentmethod = lwa_lfa1-zwels.  "Cust Payment Method
+
+* Default Values
+      <fs_supploc>-zzpcardacceptancelevel = '0'.
+      <fs_supploc>-zzchangeorderrestric = '0'.  "Change Order restrictions
+      <fs_supploc>-zzpaymentmodel = '0'.
+      <fs_supploc>-zzlocale = 'en_US'.
+
+    ENDLOOP.
+
+
+
+
+
+  ENDMETHOD.
